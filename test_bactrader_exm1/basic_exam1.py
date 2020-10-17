@@ -11,6 +11,7 @@ import backtrader as bt
 
 # Create a Stratey
 class TestStrategy(bt.Strategy):
+    params = (('maperiod',15),('exitbars',5))
 
     def log(self, txt, dt=None):
         ''' Logging function fot this strategy'''
@@ -25,6 +26,19 @@ class TestStrategy(bt.Strategy):
         self.order = None
         self.buyprice = None
         self.buycomm = None
+
+        # add a moving averagesimple indicator
+        self.sma = bt.indicators.SimpleMovingAverage(self.datas[0],period = self.params.maperiod)
+
+        # Indicators for the plotting show
+        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
+        bt.indicators.WeightedMovingAverage(self.datas[0], period=25,
+                                            subplot=True)
+        bt.indicators.StochasticSlow(self.datas[0])
+        bt.indicators.MACDHisto(self.datas[0])
+        rsi = bt.indicators.RSI(self.datas[0])
+        bt.indicators.SmoothedMovingAverage(rsi, period=10)
+        bt.indicators.ATR(self.datas[0], plot=False)
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -74,26 +88,36 @@ class TestStrategy(bt.Strategy):
         if not self.position:
 
             # Not yet ... we MIGHT BUY if ...
-            if self.dataclose[0] < self.dataclose[-1]:
-                    # current close less than previous close
+            # if self.dataclose[0] < self.dataclose[-1]:
+            #         # current close less than previous close
 
-                    if self.dataclose[-1] < self.dataclose[-2]:
-                        # previous close less than the previous close
+            #         if self.dataclose[-1] < self.dataclose[-2]:
+            #             # previous close less than the previous close
 
-                        # BUY, BUY, BUY!!! (with default parameters)
-                        self.log('BUY CREATE, %.2f' % self.dataclose[0])
+            #             # BUY, BUY, BUY!!! (with default parameters)
+            #             self.log('BUY CREATE, %.2f' % self.dataclose[0])
 
-                        # Keep track of the created order to avoid a 2nd order
-                        self.order = self.buy()
+            #             # Keep track of the created order to avoid a 2nd order
+            #             self.order = self.buy()
 
+            if self.dataclose[0] > self.sma[0]:
+                self.log('buy create, %.2f' % self.dataclose[0])
+                self.order = self.buy()
+
+        # else:
+
+        #     # Already in the market ... we might sell
+        #     if len(self) >= (self.bar_executed + self.params.exitbars):
+        #         # SELL, SELL, SELL!!! (with all possible default parameters)
+        #         self.log('SELL CREATE, %.2f' % self.dataclose[0])
+
+        #         # Keep track of the created order to avoid a 2nd order
+        #         self.order = self.sell()
         else:
+            if self.dataclose[0] < self.sma[0]:
+                # sell!(with all possible default parameters)
+                self.log('Sell create, %.2f' % self.dataclose[0])
 
-            # Already in the market ... we might sell
-            if len(self) >= (self.bar_executed + 5):
-                # SELL, SELL, SELL!!! (with all possible default parameters)
-                self.log('SELL CREATE, %.2f' % self.dataclose[0])
-
-                # Keep track of the created order to avoid a 2nd order
                 self.order = self.sell()
 
 
@@ -125,6 +149,9 @@ if __name__ == '__main__':
     # Set our desired cash start
     cerebro.broker.setcash(100000.0)
 
+    # add a fixedsize sizer according to the stake
+    cerebro.addsizer(bt.sizers.FixedSize, stake = 10)
+
     # Set the commission - 0.1% ... divide by 100 to remove the %
     cerebro.broker.setcommission(commission=0.001)
     # Print out the starting conditions
@@ -135,3 +162,6 @@ if __name__ == '__main__':
 
     # Print out the final result
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+    # plot the result
+    cerebro.plot()

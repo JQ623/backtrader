@@ -62,7 +62,8 @@ class DataSeries(LineSeries):
 
     _name = ''
     _compression = 1
-    _timeframe = TimeFrame.Days
+    #_timeframe = TimeFrame.Days
+    _timeframe = TimeFrame.Seconds
 
     Close, Low, High, Open, Volume, OpenInterest, DateTime = range(7)
 
@@ -109,6 +110,9 @@ class OHLC(DataSeries):
 
 
 class OHLCDateTime(OHLC):
+    params = (
+                 ('dtformat', ('%Y-%m-%d')),
+                 ('tmformat', ('%H.%M.%S')),)
     lines = (('datetime'),)
 
 
